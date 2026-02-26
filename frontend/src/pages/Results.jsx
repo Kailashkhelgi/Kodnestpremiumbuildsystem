@@ -1,36 +1,123 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, Download, ThumbsUp, AlertCircle, PlaySquare } from 'lucide-react';
 
 export default function Results() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [data, setData] = useState(null);
+    const [liveScore, setLiveScore] = useState(0);
 
+    // Initialize data and load from localStorage
     useEffect(() => {
         const history = JSON.parse(localStorage.getItem('kodnest_jd_history') || '[]');
         const found = history.find(item => item.id === id);
         if (!found && history.length > 0) {
-            // Fallback to latest
-            setData(history[0]);
+            navigate(`/dashboard/results/${history[0].id}`);
         } else if (!found) {
             navigate('/dashboard/assessments');
         } else {
+            // Ensure skillConfidenceMap exists on old entries
+            if (!found.skillConfidenceMap) {
+                const initialMap = {};
+                Object.values(found.extractedSkills).flat().forEach(skill => {
+                    initialMap[skill] = 'practice'; // default
+                });
+                found.skillConfidenceMap = initialMap;
+            }
             setData(found);
         }
     }, [id, navigate]);
 
-    if (!data) return <div className="p-8">Loading analysis...</div>;
+    // Recalculate Live Score whenever data changes
+    useEffect(() => {
+        if (!data) return;
+
+        let scoreMod = 0;
+        Object.values(data.skillConfidenceMap).forEach(val => {
+            if (val === 'know') scoreMod += 2;
+            if (val === 'practice') scoreMod -= 2;
+        });
+
+        let newScore = data.readinessScore + scoreMod;
+        if (newScore > 100) newScore = 100;
+        if (newScore < 0) newScore = 0;
+
+        setLiveScore(newScore);
+    }, [data]);
+
+    // Handle Toggle & Persist
+    const toggleSkill = (skill) => {
+        const currentVal = data.skillConfidenceMap[skill];
+        const newVal = currentVal === 'know' ? 'practice' : 'know';
+
+        const updatedData = {
+            ...data,
+            skillConfidenceMap: {
+                ...data.skillConfidenceMap,
+                [skill]: newVal
+            }
+        };
+
+        setData(updatedData);
+
+        // Persist completely
+        const history = JSON.parse(localStorage.getItem('kodnest_jd_history') || '[]');
+        const updatedHistory = history.map(item => item.id === id ? updatedData : item);
+        localStorage.setItem('kodnest_jd_history', JSON.stringify(updatedHistory));
+    };
+
+
+    // Export Utilities
+    const copyPlan = () => {
+        const text = data.plan.map(p => `${p.day} - ${p.focus}\n${p.detail}`).join('\n\n');
+        navigator.clipboard.writeText(`7-Day Plan:\n\n${text}`);
+        alert("7-Day plan copied to clipboard!");
+    };
+
+    const copyChecklist = () => {
+        const text = data.checklist.map(r => `${r.round}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
+        navigator.clipboard.writeText(`Interview Checklist:\n\n${text}`);
+        alert("Checklist copied to clipboard!");
+    };
+
+    const copyQuestions = () => {
+        const text = data.questions.map((q, i) => `${i + 1}. [${q.skill}] ${q.q}`).join('\n');
+        navigator.clipboard.writeText(`Mock Questions:\n\n${text}`);
+        alert("Questions copied to clipboard!");
+    };
+
+    const downloadTXT = () => {
+        const planText = data.plan.map(p => `${p.day} - ${p.focus}\n${p.detail}`).join('\n\n');
+        const checklistText = data.checklist.map(r => `${r.round}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
+        const questionsText = data.questions.map((q, i) => `${i + 1}. [${q.skill}] ${q.q}`).join('\n');
+
+        const fullBlob = `KODNEST PLACEMENT PREP\n${data.role} @ ${data.company}\n\n=====================\n7-DAY STRATEGIC PLAN\n=====================\n${planText}\n\n=====================\nINTERVIEW CHECKLIST\n=====================\n${checklistText}\n\n=====================\nMOCK QUESTIONS\n=====================\n${questionsText}`;
+
+        const element = document.createElement("a");
+        const file = new Blob([fullBlob], { type: 'text/plain' });
+        element.href = URL.createObjectURL(file);
+        element.download = `${data.company.replace(/\s+/g, '_')}_Preparation_Plan.txt`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    };
+
+    // Derive top 3 weak skills
+    const weakSkills = data ? Object.entries(data.skillConfidenceMap).filter(([_, val]) => val === 'practice').map(([k]) => k).slice(0, 3) : [];
+
+
+    if (!data) return <div className="p-8 font-sans">Loading analysis...</div>;
 
     return (
-        <div className="space-y-8 pb-12">
-            {/* Header Info */}
+        <div className="space-y-8 pb-12 font-sans">
+            {/* Header Info & Actions */}
             <div className="flex justify-between flex-wrap gap-4 items-end border-b border-[var(--clr-border)] pb-6">
                 <div>
                     <button
                         onClick={() => navigate('/dashboard/assessments')}
-                        className="flex items-center gap-2 text-[color:var(--clr-accent)] mb-4 hover:underline text-sm font-medium"
+                        className="flex items-center gap-2 text-[color:var(--clr-accent)] mb-4 hover:underline text-sm font-medium transition-all"
                     >
                         <ArrowLeft size={16} /> Back to History
                     </button>
@@ -40,10 +127,13 @@ export default function Results() {
                     <p className="text-lg text-gray-500 mt-1">{data.company}</p>
                 </div>
 
-                <div className="flex items-center gap-4 bg-[var(--clr-surface-alt)] px-6 py-4 rounded-xl border border-[var(--clr-border)] text-center">
+                <div className="flex items-center gap-4 bg-[var(--clr-surface-alt)] px-6 py-4 rounded-xl border border-[var(--clr-border)] text-center transition-all">
                     <div>
-                        <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Score</div>
-                        <div className="text-3xl font-serif text-[color:var(--clr-accent)] font-bold">{data.readinessScore}/100</div>
+                        <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Live Score</div>
+                        <div className="text-4xl font-serif text-[color:var(--clr-accent)] font-bold transition-all duration-300 transform">
+                            {liveScore}
+                            <span className="text-xl text-gray-400 font-normal">/100</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -53,22 +143,34 @@ export default function Results() {
                 {/* Left Col - 2/3 */}
                 <div className="lg:col-span-2 space-y-8">
 
-                    {/* A) Extracted Skills */}
+                    {/* A) Extracted Skills Interactive */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Extracted Skills Profile</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle>Skill Self-Assessment</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex flex-wrap gap-6">
+                            <p className="text-sm text-gray-500 mb-6">Toggle your confidence in each detected skill to update your live readiness score.</p>
+                            <div className="flex flex-wrap gap-x-8 gap-y-6">
                                 {Object.entries(data.extractedSkills).map(([category, skills]) => (
-                                    <div key={category} className="space-y-2">
+                                    <div key={category} className="space-y-3 min-w-[200px]">
                                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{category}</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {skills.map(skill => (
-                                                <span key={skill} className="px-3 py-1 bg-indigo-50 text-[color:var(--clr-accent)] rounded-full text-sm font-medium border border-indigo-200">
-                                                    {skill}
-                                                </span>
-                                            ))}
+                                        <div className="flex flex-col gap-2">
+                                            {skills.map(skill => {
+                                                const isKnown = data.skillConfidenceMap[skill] === 'know';
+                                                return (
+                                                    <button
+                                                        key={skill}
+                                                        onClick={() => toggleSkill(skill)}
+                                                        className={`flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium border transition-all duration-200 ${isKnown
+                                                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                                                : 'bg-indigo-50 border-indigo-200 text-[color:var(--clr-accent)]'
+                                                            }`}
+                                                    >
+                                                        <span>{skill}</span>
+                                                        {isKnown ? <ThumbsUp size={14} /> : <AlertCircle size={14} />}
+                                                    </button>
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 ))}
@@ -78,14 +180,17 @@ export default function Results() {
 
                     {/* C) 7-Day Plan */}
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle>Strategic 7-Day Plan</CardTitle>
+                            <button onClick={copyPlan} className="btn btn--secondary h-8 px-3 text-xs flex gap-2">
+                                <Copy size={12} /> Copy Plan
+                            </button>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-6">
+                            <div className="space-y-6 mt-4">
                                 {data.plan.map((item, idx) => (
                                     <div key={idx} className="flex gap-4 border-l-2 border-[color:var(--clr-accent)] pl-4">
-                                        <div className="w-20 font-serif font-bold text-[color:var(--clr-accent)]">{item.day}</div>
+                                        <div className="w-20 shrink-0 font-serif font-bold text-[color:var(--clr-accent)]">{item.day}</div>
                                         <div>
                                             <h4 className="font-semibold text-[color:var(--clr-text-primary)]">{item.focus}</h4>
                                             <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
@@ -98,11 +203,14 @@ export default function Results() {
 
                     {/* D) Likely Interview Questions */}
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle>Targeted Mock Questions</CardTitle>
+                            <button onClick={copyQuestions} className="btn btn--secondary h-8 px-3 text-xs flex gap-2">
+                                <Copy size={12} /> Copy Questions
+                            </button>
                         </CardHeader>
                         <CardContent>
-                            <ul className="list-decimal pl-5 space-y-4">
+                            <ul className="list-decimal pl-5 space-y-4 mt-4">
                                 {data.questions.map((q, idx) => (
                                     <li key={idx} className="text-[color:var(--clr-text-primary)] leading-relaxed">
                                         <span className="font-semibold">{q.q}</span>
@@ -118,13 +226,22 @@ export default function Results() {
                 {/* Right Col - 1/3 */}
                 <div className="space-y-8">
 
+                    {/* Master Export Button */}
+                    <button onClick={downloadTXT} className="btn btn--primary w-full flex gap-2 items-center justify-center py-6 h-auto shadow-sm">
+                        <Download size={20} />
+                        Download Full Strategy (TXT)
+                    </button>
+
                     {/* B) Interview Rounds Checklist */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Round-wise Checklist</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle>Rounds Checklist</CardTitle>
+                            <button onClick={copyChecklist} className="btn btn--secondary h-8 px-3 text-xs flex gap-2">
+                                <Copy size={12} /> Copy
+                            </button>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-8">
+                            <div className="space-y-8 mt-4">
                                 {data.checklist.map((round, idx) => (
                                     <div key={idx}>
                                         <h4 className="font-bold text-gray-800 pb-2 border-b border-[var(--clr-border)] mb-3 flex items-center gap-2">
@@ -133,7 +250,7 @@ export default function Results() {
                                         <ul className="space-y-3">
                                             {round.items.map((item, i) => (
                                                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                                                    <CheckCircle2 size={16} className="text-gray-300 mt-0.5 shrink-0" />
+                                                    <CheckCircle2 size={16} className="text-[color:var(--clr-accent)] mt-0.5 shrink-0" />
                                                     <span>{item}</span>
                                                 </li>
                                             ))}
@@ -146,6 +263,25 @@ export default function Results() {
 
                 </div>
 
+            </div>
+
+            {/* Action Next Box */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 mt-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+                <div>
+                    <h3 className="text-xl font-serif font-bold text-[color:var(--clr-text-primary)] flex items-center gap-2 mb-2">
+                        <PlaySquare className="text-[color:var(--clr-accent)]" /> Your Action Next
+                    </h3>
+                    {weakSkills.length > 0 ? (
+                        <p className="text-gray-600 max-w-2xl text-sm">
+                            Based on your self-assessment, prioritize revising <span className="font-semibold text-gray-800">{weakSkills.join(', ')}</span>.
+                        </p>
+                    ) : (
+                        <p className="text-gray-600 max-w-2xl text-sm">Great shape! You are confident across all technical parameters.</p>
+                    )}
+                </div>
+                <button className="btn btn--primary h-12 px-8 shrink-0 shadow-md">
+                    Start Day 1 Plan Now
+                </button>
             </div>
 
         </div>
