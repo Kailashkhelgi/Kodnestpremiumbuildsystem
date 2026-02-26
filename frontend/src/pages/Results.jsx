@@ -11,22 +11,27 @@ export default function Results() {
 
     // Initialize data and load from localStorage
     useEffect(() => {
-        const history = JSON.parse(localStorage.getItem('kodnest_jd_history') || '[]');
-        const found = history.find(item => item.id === id);
-        if (!found && history.length > 0) {
-            navigate(`/dashboard/results/${history[0].id}`);
-        } else if (!found) {
-            navigate('/dashboard/assessments');
-        } else {
-            // Ensure skillConfidenceMap exists on old entries
-            if (!found.skillConfidenceMap) {
-                const initialMap = {};
-                Object.values(found.extractedSkills).flat().forEach(skill => {
-                    initialMap[skill] = 'practice'; // default
-                });
-                found.skillConfidenceMap = initialMap;
+        try {
+            const history = JSON.parse(localStorage.getItem('kodnest_jd_history') || '[]');
+            const found = history.find(item => item.id === id);
+
+            if (!found && history.length > 0) {
+                navigate(`/dashboard/results/${history[0].id}`);
+            } else if (!found) {
+                navigate('/dashboard/assessments');
+            } else {
+                // Assert required baseline structure for resilience
+                if (!found.skillConfidenceMap || !found.plan7Days) throw new Error("Schema violation");
+                setData(found);
             }
-            setData(found);
+        } catch (err) {
+            // Corrupt or old schema entry handling
+            const confirmNew = window.confirm("One saved entry couldn't be loaded (likely from an older version format). Create a new analysis?");
+            if (confirmNew) {
+                navigate('/dashboard/assessments');
+            } else {
+                navigate('/dashboard');
+            }
         }
     }, [id, navigate]);
 
@@ -37,14 +42,16 @@ export default function Results() {
         let scoreMod = 0;
         Object.values(data.skillConfidenceMap).forEach(val => {
             if (val === 'know') scoreMod += 2;
-            if (val === 'practice') scoreMod -= 2;
         });
 
-        let newScore = data.readinessScore + scoreMod;
+        // Calculate up from baseScore considering 'practice' is the baseline finalScore logic now
+        const offsetMax = Object.keys(data.skillConfidenceMap).length * 2;
+        let newScore = (data.baseScore - offsetMax) + scoreMod;
+
         if (newScore > 100) newScore = 100;
         if (newScore < 0) newScore = 0;
 
-        setLiveScore(newScore);
+        setLiveScore(Math.max(0, newScore));
     }, [data]);
 
     // Handle Toggle & Persist
@@ -57,7 +64,9 @@ export default function Results() {
             skillConfidenceMap: {
                 ...data.skillConfidenceMap,
                 [skill]: newVal
-            }
+            },
+            finalScore: liveScore,
+            updatedAt: new Date().toISOString()
         };
 
         setData(updatedData);
@@ -71,27 +80,27 @@ export default function Results() {
 
     // Export Utilities
     const copyPlan = () => {
-        const text = data.plan.map(p => `${p.day} - ${p.focus}\n${p.detail}`).join('\n\n');
+        const text = data.plan7Days.map(p => `${p.day} - ${p.focus}\n${p.tasks.join(', ')}`).join('\n\n');
         navigator.clipboard.writeText(`7-Day Plan:\n\n${text}`);
         alert("7-Day plan copied to clipboard!");
     };
 
     const copyChecklist = () => {
-        const text = data.checklist.map(r => `${r.round}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
+        const text = data.checklist.map(r => `${r.roundTitle}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
         navigator.clipboard.writeText(`Interview Checklist:\n\n${text}`);
         alert("Checklist copied to clipboard!");
     };
 
     const copyQuestions = () => {
-        const text = data.questions.map((q, i) => `${i + 1}. [${q.skill}] ${q.q}`).join('\n');
+        const text = data.questions.map((q, i) => `${i + 1}. ${q}`).join('\n');
         navigator.clipboard.writeText(`Mock Questions:\n\n${text}`);
         alert("Questions copied to clipboard!");
     };
 
     const downloadTXT = () => {
-        const planText = data.plan.map(p => `${p.day} - ${p.focus}\n${p.detail}`).join('\n\n');
-        const checklistText = data.checklist.map(r => `${r.round}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
-        const questionsText = data.questions.map((q, i) => `${i + 1}. [${q.skill}] ${q.q}`).join('\n');
+        const planText = data.plan7Days.map(p => `${p.day} - ${p.focus}\n${p.tasks.join(', ')}`).join('\n\n');
+        const checklistText = data.checklist.map(r => `${r.roundTitle}\n` + r.items.map(i => `- ${i}`).join('\n')).join('\n\n');
+        const questionsText = data.questions.map((q, i) => `${i + 1}. ${q}`).join('\n');
 
         const fullBlob = `KODNEST PLACEMENT PREP\n${data.role} @ ${data.company}\n\n=====================\n7-DAY STRATEGIC PLAN\n=====================\n${planText}\n\n=====================\nINTERVIEW CHECKLIST\n=====================\n${checklistText}\n\n=====================\nMOCK QUESTIONS\n=====================\n${questionsText}`;
 
@@ -151,9 +160,9 @@ export default function Results() {
                         <CardContent>
                             <p className="text-sm text-gray-500 mb-6">Toggle your confidence in each detected skill to update your live readiness score.</p>
                             <div className="flex flex-wrap gap-x-8 gap-y-6">
-                                {Object.entries(data.extractedSkills).map(([category, skills]) => (
+                                {Object.entries(data.extractedSkills).filter(([_, arr]) => arr && arr.length > 0).map(([category, skills]) => (
                                     <div key={category} className="space-y-3 min-w-[200px]">
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{category}</h4>
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{category.replace('coreCS', 'Core CS')}</h4>
                                         <div className="flex flex-col gap-2">
                                             {skills.map(skill => {
                                                 const isKnown = data.skillConfidenceMap[skill] === 'know';
@@ -188,12 +197,16 @@ export default function Results() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6 mt-4">
-                                {data.plan.map((item, idx) => (
+                                {data.plan7Days.map((item, idx) => (
                                     <div key={idx} className="flex gap-4 border-l-2 border-[color:var(--clr-accent)] pl-4">
                                         <div className="w-20 shrink-0 font-serif font-bold text-[color:var(--clr-accent)]">{item.day}</div>
                                         <div>
                                             <h4 className="font-semibold text-[color:var(--clr-text-primary)]">{item.focus}</h4>
-                                            <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
+                                            <ul className="text-sm text-gray-600 mt-1 list-disc pl-4">
+                                                {item.tasks.map((task, tIdx) => (
+                                                    <li key={tIdx}>{task}</li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     </div>
                                 ))}
@@ -213,8 +226,7 @@ export default function Results() {
                             <ul className="list-decimal pl-5 space-y-4 mt-4">
                                 {data.questions.map((q, idx) => (
                                     <li key={idx} className="text-[color:var(--clr-text-primary)] leading-relaxed">
-                                        <span className="font-semibold">{q.q}</span>
-                                        <div className="text-xs text-[color:var(--clr-accent)] font-medium mt-1">Focus: {q.skill}</div>
+                                        <span className="font-semibold">{q}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -275,9 +287,11 @@ export default function Results() {
                                                 {i + 1}
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-[color:var(--clr-text-primary)]">{r.title}</h4>
-                                                <p className="text-sm font-medium text-[color:var(--clr-accent)] mb-1">{r.focus}</p>
-                                                <p className="text-xs text-gray-500">{r.why}</p>
+                                                <h4 className="font-bold text-[color:var(--clr-text-primary)]">{r.roundTitle}</h4>
+                                                <div className="text-sm font-medium text-[color:var(--clr-accent)] mb-1">
+                                                    {r.focusAreas.join(", ")}
+                                                </div>
+                                                <p className="text-xs text-gray-500">{r.whyItMatters}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -299,7 +313,7 @@ export default function Results() {
                                 {data.checklist.map((round, idx) => (
                                     <div key={idx}>
                                         <h4 className="font-bold text-gray-800 pb-2 border-b border-[var(--clr-border)] mb-3 flex items-center gap-2">
-                                            {round.round.split(': ')[0]} <span className="text-gray-400 font-normal text-sm">: {round.round.split(': ')[1]}</span>
+                                            {round.roundTitle.split(': ')[0]} <span className="text-gray-400 font-normal text-sm">: {round.roundTitle.split(': ')[1] || ""}</span>
                                         </h4>
                                         <ul className="space-y-3">
                                             {round.items.map((item, i) => (

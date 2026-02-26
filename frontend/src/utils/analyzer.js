@@ -30,20 +30,42 @@ export function analyzeJD(jdText, company, role) {
     const text = jdText.toLowerCase();
 
     // 1. Extract Skills
-    const extractedSkills = {};
+    const extractedSkills = {
+        coreCS: [],
+        languages: [],
+        web: [],
+        data: [],
+        cloud: [],
+        testing: [],
+        other: []
+    };
+
+    const categoryMap = {
+        "Core CS": "coreCS",
+        "Languages": "languages",
+        "Web": "web",
+        "Data": "data",
+        "Cloud/DevOps": "cloud",
+        "Testing": "testing"
+    };
+
     let totalCategoriesDetected = 0;
 
     Object.keys(SKILL_CATEGORIES).forEach(category => {
         const found = SKILL_CATEGORIES[category].filter(skill => text.includes(skill.toLowerCase()));
         if (found.length > 0) {
             // Deduplicate and prioritize explicit naming
-            extractedSkills[category] = Array.from(new Set(found));
+            extractedSkills[categoryMap[category]] = Array.from(new Set(found));
             totalCategoriesDetected++;
         }
     });
 
     const allDetectedSkills = Object.values(extractedSkills).flat();
     const hasFormatting = allDetectedSkills.length > 0;
+
+    if (!hasFormatting) {
+        extractedSkills.other = ["Communication", "Problem solving", "Basic coding", "Projects"];
+    }
 
     // 1b. Generate Company Intel
     const knownEnterprises = ["amazon", "microsoft", "google", "meta", "apple", "netflix", "infosys", "tcs", "wipro", "accenture", "cognizant", "ibm", "oracle", "cisco", "intel", "adobe", "salesforce"];
@@ -77,24 +99,24 @@ export function analyzeJD(jdText, company, role) {
     // 1c. Dynamic Round Mapping Engine
     const roundMapping = [];
     const isEnterprise = companySize === "Enterprise (2000+)";
-    const hasReactNode = extractedSkills["Web"]?.includes("react") || extractedSkills["Web"]?.includes("node.js") || extractedSkills["Web"]?.includes("express");
-    const hasDSA = extractedSkills["Core CS"]?.includes("dsa") || extractedSkills["Core CS"]?.includes("algorithms");
+    const hasReactNode = extractedSkills.web.includes("react") || extractedSkills.web.includes("node.js") || extractedSkills.web.includes("express");
+    const hasDSA = extractedSkills.coreCS.includes("dsa") || extractedSkills.coreCS.includes("algorithms");
 
     if (isEnterprise || hasDSA) {
-        roundMapping.push({ round: "Round 1", title: "Online Assessment (OA)", focus: "Aptitude, basic coding, and core CS MCQs.", why: "Enterprises use OAs to filter thousands of initial applications." });
-        roundMapping.push({ round: "Round 2", title: "Technical Interview I", focus: "Medium/Hard DSA and problem-solving.", why: "Tests your ability to write optimized code under pressure." });
-        roundMapping.push({ round: "Round 3", title: "Technical Interview II", focus: "Low Level Design (LLD) and Core CS depth.", why: "Evaluates architectural thinking and OOP application." });
-        roundMapping.push({ round: "Round 4", title: "Managerial / HR", focus: "Behavioral fit, leadership principles.", why: "Checks culture fit and long-term retention probability." });
+        roundMapping.push({ roundTitle: "Round 1: Online Assessment (OA)", focusAreas: ["Aptitude", "Basic coding", "Core CS MCQs"], whyItMatters: "Enterprises use OAs to filter thousands of initial applications." });
+        roundMapping.push({ roundTitle: "Round 2: Technical Interview I", focusAreas: ["Medium/Hard DSA", "Problem-solving"], whyItMatters: "Tests your ability to write optimized code under pressure." });
+        roundMapping.push({ roundTitle: "Round 3: Technical Interview II", focusAreas: ["Low Level Design (LLD)", "Core CS depth"], whyItMatters: "Evaluates architectural thinking and OOP application." });
+        roundMapping.push({ roundTitle: "Round 4: Managerial / HR", focusAreas: ["Behavioral fit", "Leadership principles"], whyItMatters: "Checks culture fit and long-term retention probability." });
     } else {
-        roundMapping.push({ round: "Round 1", title: "Take-home Assignment / Live Coding", focus: "Practical implementation of a small feature.", why: "Startups need engineers who can ship code immediately." });
-        roundMapping.push({ round: "Round 2", title: "Technical Dive (Stack specific)", focus: hasReactNode ? "Deep dive into state management, APIs, and rendering." : "Deep dive into your primary language/framework.", why: "Validates your resume claims against real-world tasks." });
-        roundMapping.push({ round: "Round 3", title: "Founder / Culture Fit", focus: "Direct discussion on vision, pace, and adaptability.", why: "Startups require highly autonomous, adaptable individuals." });
+        roundMapping.push({ roundTitle: "Round 1: Take-home Assignment", focusAreas: ["Practical feature implementation"], whyItMatters: "Startups need engineers who can ship code immediately." });
+        roundMapping.push({ roundTitle: "Round 2: Technical Dive", focusAreas: hasReactNode ? ["State management", "APIs", "Rendering"] : ["Deep dive into your primary language/framework"], whyItMatters: "Validates your resume claims against real-world tasks." });
+        roundMapping.push({ roundTitle: "Round 3: Culture Fit", focusAreas: ["Vision", "Pace", "Adaptability"], whyItMatters: "Startups require highly autonomous, adaptable individuals." });
     }
 
     // 2. Generate Checklist
     const checklist = [
         {
-            round: "Round 1: Aptitude / Basics",
+            roundTitle: "Round 1: Aptitude / Basics",
             items: [
                 "Time & Work, Speed & Distance math problems",
                 "Logical reasoning and pattern detection",
@@ -104,55 +126,55 @@ export function analyzeJD(jdText, company, role) {
             ]
         },
         {
-            round: "Round 2: DSA + Core CS",
+            roundTitle: "Round 2: DSA + Core CS",
             items: [
                 "Arrays, Strings, and Maps implementation",
                 "Sorting & searching algorithms",
-                extractedSkills["Core CS"]?.includes("oop") ? "Object-Oriented Design patterns" : "Basic OOP concepts",
-                extractedSkills["Core CS"]?.includes("dbms") ? "Database normalization and basic queries" : "Memory management overview",
+                extractedSkills.coreCS.includes("oop") ? "Object-Oriented Design patterns" : "Basic OOP concepts",
+                extractedSkills.coreCS.includes("dbms") ? "Database normalization and basic queries" : "Memory management overview",
                 "Time & Space complexity analysis"
             ]
         },
         {
-            round: "Round 3: Tech Interview (Projects + Stack)",
+            roundTitle: "Round 3: Tech Interview (Projects + Stack)",
             items: [
                 "In-depth explanation of recent projects",
-                extractedSkills["Web"] ? `Deep dive into web stack (${extractedSkills["Web"].join(", ")})` : "General web knowledge",
-                extractedSkills["Data"] ? `Database optimizations (${extractedSkills["Data"].join(", ")})` : "Data persistence concepts",
-                extractedSkills["Cloud/DevOps"] ? "Deployment architectures discussion" : "Code versioning (Git) practices",
+                extractedSkills.web.length > 0 ? `Deep dive into web stack (${extractedSkills.web.join(", ")})` : "General web knowledge",
+                extractedSkills.data.length > 0 ? `Database optimizations (${extractedSkills.data.join(", ")})` : "Data persistence concepts",
+                extractedSkills.cloud.length > 0 ? "Deployment architectures discussion" : "Code versioning (Git) practices",
                 "Handling edge cases in API development"
             ]
         },
         {
-            round: "Round 4: Managerial / HR",
+            roundTitle: "Round 4: Managerial / HR",
             items: [
                 "Introduction and background walkthrough",
                 "Discussion on strengths and weaknesses",
                 "Behavioral questions (STAR method)",
-                `Why do you want to join ${company || "our company"}?`,
+                `Why do you want to join ${company || "this company"}?`,
                 "Salary expectations and notice period"
             ]
         }
     ];
 
     // 3. Generate 7-Day Plan
-    const plan = [
-        { day: "Day 1-2", focus: "Basics + Core CS", detail: "Revise OOP, DBMS, OS concepts. Practice easy array/string problems." },
-        { day: "Day 3-4", focus: "DSA + Coding Practice", detail: "Focus on Trees, Graphs, DP. Complete 10 mid-level LeetCode problems." },
-        { day: "Day 5", focus: "Project + Resume Alignment", detail: `Map resume points to JD skills: ${allDetectedSkills.slice(0, 3).join(", ") || "General tech"}.` },
-        { day: "Day 6", focus: "Mock Interview Questions", detail: "Do a 1-hour P2P mock interview focusing on technical depth." },
-        { day: "Day 7", focus: "Revision + Weak Areas", detail: "Review behavioral answers, read company core values, rest." }
+    const plan7Days = [
+        { day: "Day 1-2", focus: "Basics + Core CS", tasks: ["Revise OOP, DBMS, OS concepts", "Practice easy array/string problems"] },
+        { day: "Day 3-4", focus: "DSA + Coding Practice", tasks: ["Focus on Trees, Graphs, DP", "Complete 10 mid-level LeetCode problems"] },
+        { day: "Day 5", focus: "Project + Resume Alignment", tasks: [`Map resume points to JD skills: ${allDetectedSkills.slice(0, 3).join(", ") || "General tech"}`] },
+        { day: "Day 6", focus: "Mock Interview Questions", tasks: ["Do a 1-hour P2P mock interview focusing on technical depth"] },
+        { day: "Day 7", focus: "Revision + Weak Areas", tasks: ["Review behavioral answers", "Read company core values"] }
     ];
 
-    if (extractedSkills["Web"]?.includes("react")) {
-        plan[2].detail += " Include React lifecycle/hooks revision.";
+    if (extractedSkills.web.includes("react")) {
+        plan7Days[2].tasks.push("Include React lifecycle/hooks revision");
     }
 
     // 4. Generate 10 Questions
     let questions = [];
     allDetectedSkills.forEach(skill => {
         if (QUESTION_BANK[skill.toLowerCase()] && questions.length < 10) {
-            questions.push({ skill, q: QUESTION_BANK[skill.toLowerCase()] });
+            questions.push(`[${skill}] ${QUESTION_BANK[skill.toLowerCase()]}`);
         }
     });
 
@@ -171,7 +193,7 @@ export function analyzeJD(jdText, company, role) {
     ];
 
     while (questions.length < 10 && genericQuestions.length > 0) {
-        questions.push({ skill: "General", q: genericQuestions.shift() });
+        questions.push(`[General] ${genericQuestions.shift()}`);
     }
 
     // 5. Readiness Score
@@ -183,18 +205,28 @@ export function analyzeJD(jdText, company, role) {
 
     if (score > 100) score = 100;
 
+    const skillConfidenceMap = {};
+    Object.values(extractedSkills).flat().forEach(skill => {
+        skillConfidenceMap[skill] = 'practice';
+    });
+
+    const finalScore = score - (Object.keys(skillConfidenceMap).length * 2); // all default 'practice'
+
     return {
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
-        company: company || "Unknown Company",
-        role: role || "General Developer",
+        updatedAt: new Date().toISOString(),
+        company: company || "",
+        role: role || "",
         jdText,
-        extractedSkills: hasFormatting ? extractedSkills : { "General": ["General fresher stack"] },
+        extractedSkills,
         companyIntel,
         roundMapping,
-        plan,
+        plan7Days,
         checklist,
         questions,
-        readinessScore: score
+        baseScore: score,
+        skillConfidenceMap,
+        finalScore: Math.max(0, finalScore)
     };
 }

@@ -9,6 +9,7 @@ export default function Assessments() {
     const [company, setCompany] = useState('');
     const [role, setRole] = useState('');
     const [jdText, setJdText] = useState('');
+    const [jdError, setJdError] = useState('');
     const [history, setHistory] = useState([]);
 
     useEffect(() => {
@@ -20,7 +21,13 @@ export default function Assessments() {
 
     const handleAnalyze = (e) => {
         e.preventDefault();
+        setJdError('');
         if (!jdText.trim()) return;
+
+        if (jdText.trim().length < 200) {
+            setJdError('This JD is too short to analyze deeply. Paste full JD for better output.');
+            return;
+        }
 
         const result = analyzeJD(jdText, company, role);
 
@@ -78,15 +85,21 @@ export default function Assessments() {
                                 </div>
                             </div>
 
-                            <div className="form-group !mb-0">
+                            <div className="form-group !mb-4">
                                 <label className="form-label text-sm">Job Description *</label>
                                 <textarea
-                                    className="form-input h-32 py-3 resize-none"
+                                    className={`form-input h-32 py-3 resize-none ${jdError ? 'border-red-500 focus:ring-red-200' : ''}`}
                                     placeholder="Paste the full job description here..."
                                     required
                                     value={jdText}
-                                    onChange={e => setJdText(e.target.value)}
+                                    onChange={e => {
+                                        setJdText(e.target.value);
+                                        if (jdError) setJdError('');
+                                    }}
                                 />
+                                {jdError && (
+                                    <p className="text-sm text-red-500 mt-2 font-medium bg-red-50 p-2 rounded border border-red-100">{jdError}</p>
+                                )}
                             </div>
 
                             <button type="submit" className="btn btn--primary w-full mt-4" disabled={!jdText.trim()}>
