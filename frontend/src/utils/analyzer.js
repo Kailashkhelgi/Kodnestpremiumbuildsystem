@@ -45,6 +45,52 @@ export function analyzeJD(jdText, company, role) {
     const allDetectedSkills = Object.values(extractedSkills).flat();
     const hasFormatting = allDetectedSkills.length > 0;
 
+    // 1b. Generate Company Intel
+    const knownEnterprises = ["amazon", "microsoft", "google", "meta", "apple", "netflix", "infosys", "tcs", "wipro", "accenture", "cognizant", "ibm", "oracle", "cisco", "intel", "adobe", "salesforce"];
+
+    let companySize = "Startup (<200)";
+    let industry = "Technology Services";
+    let typicalFocus = "Practical problem solving, rapid development, and stack depth.";
+
+    const compLower = (company || "").toLowerCase();
+
+    if (compLower) {
+        if (knownEnterprises.some(e => compLower.includes(e))) {
+            companySize = "Enterprise (2000+)";
+            typicalFocus = "Structured DSA, core CS fundamentals, and scalable system design.";
+        } else if (compLower.includes("bank") || compLower.includes("finance") || compLower.includes("capital")) {
+            industry = "FinTech / Banking";
+            companySize = "Mid-size (200-2000)";
+            typicalFocus = "Security, robust testing, and complex data handling.";
+        } else if (compLower.includes("health") || compLower.includes("med")) {
+            industry = "HealthTech";
+        }
+    }
+
+    const companyIntel = {
+        name: company || "Unknown Company",
+        industry,
+        size: companySize,
+        typicalFocus
+    };
+
+    // 1c. Dynamic Round Mapping Engine
+    const roundMapping = [];
+    const isEnterprise = companySize === "Enterprise (2000+)";
+    const hasReactNode = extractedSkills["Web"]?.includes("react") || extractedSkills["Web"]?.includes("node.js") || extractedSkills["Web"]?.includes("express");
+    const hasDSA = extractedSkills["Core CS"]?.includes("dsa") || extractedSkills["Core CS"]?.includes("algorithms");
+
+    if (isEnterprise || hasDSA) {
+        roundMapping.push({ round: "Round 1", title: "Online Assessment (OA)", focus: "Aptitude, basic coding, and core CS MCQs.", why: "Enterprises use OAs to filter thousands of initial applications." });
+        roundMapping.push({ round: "Round 2", title: "Technical Interview I", focus: "Medium/Hard DSA and problem-solving.", why: "Tests your ability to write optimized code under pressure." });
+        roundMapping.push({ round: "Round 3", title: "Technical Interview II", focus: "Low Level Design (LLD) and Core CS depth.", why: "Evaluates architectural thinking and OOP application." });
+        roundMapping.push({ round: "Round 4", title: "Managerial / HR", focus: "Behavioral fit, leadership principles.", why: "Checks culture fit and long-term retention probability." });
+    } else {
+        roundMapping.push({ round: "Round 1", title: "Take-home Assignment / Live Coding", focus: "Practical implementation of a small feature.", why: "Startups need engineers who can ship code immediately." });
+        roundMapping.push({ round: "Round 2", title: "Technical Dive (Stack specific)", focus: hasReactNode ? "Deep dive into state management, APIs, and rendering." : "Deep dive into your primary language/framework.", why: "Validates your resume claims against real-world tasks." });
+        roundMapping.push({ round: "Round 3", title: "Founder / Culture Fit", focus: "Direct discussion on vision, pace, and adaptability.", why: "Startups require highly autonomous, adaptable individuals." });
+    }
+
     // 2. Generate Checklist
     const checklist = [
         {
@@ -144,6 +190,8 @@ export function analyzeJD(jdText, company, role) {
         role: role || "General Developer",
         jdText,
         extractedSkills: hasFormatting ? extractedSkills : { "General": ["General fresher stack"] },
+        companyIntel,
+        roundMapping,
         plan,
         checklist,
         questions,

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { ArrowLeft, CheckCircle2, Copy, Download, ThumbsUp, AlertCircle, PlaySquare } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, Download, ThumbsUp, AlertCircle, PlaySquare, Building2, Map } from 'lucide-react';
 
 export default function Results() {
     const { id } = useParams();
@@ -162,8 +162,8 @@ export default function Results() {
                                                         key={skill}
                                                         onClick={() => toggleSkill(skill)}
                                                         className={`flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium border transition-all duration-200 ${isKnown
-                                                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                                                : 'bg-indigo-50 border-indigo-200 text-[color:var(--clr-accent)]'
+                                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                                            : 'bg-indigo-50 border-indigo-200 text-[color:var(--clr-accent)]'
                                                             }`}
                                                     >
                                                         <span>{skill}</span>
@@ -231,6 +231,60 @@ export default function Results() {
                         <Download size={20} />
                         Download Full Strategy (TXT)
                     </button>
+
+                    {/* Company Intel Block */}
+                    {data.companyIntel && (
+                        <Card className="bg-gradient-to-br from-[var(--clr-bg)] to-[var(--clr-surface)]">
+                            <CardHeader className="pb-3 border-b border-[var(--clr-border)]">
+                                <CardTitle className="flex items-center gap-2">
+                                    <Building2 className="text-[color:var(--clr-accent)]" size={18} /> Company Intel
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-4 space-y-4">
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Industry & Size</h4>
+                                    <p className="font-semibold text-[color:var(--clr-text-primary)]">{data.companyIntel.industry}</p>
+                                    <p className="text-sm text-gray-500">{data.companyIntel.size}</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Typical Hiring Focus</h4>
+                                    <p className="text-sm text-gray-700 leading-relaxed">{data.companyIntel.typicalFocus}</p>
+                                </div>
+                                <p className="text-[10px] text-gray-400 pt-2 italic">Demo Mode: Company intel generated heuristically.</p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Dynamic Round Mapping */}
+                    {data.roundMapping && (
+                        <Card>
+                            <CardHeader className="pb-3 border-b border-[var(--clr-border)]">
+                                <CardTitle className="flex items-center gap-2">
+                                    <Map className="text-[color:var(--clr-accent)]" size={18} /> Predicted Round Flow
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 relative">
+                                {/* Vertical Line */}
+                                <div className="absolute left-[39px] top-6 bottom-6 w-0.5 bg-gray-100 hidden md:block" />
+
+                                <div className="space-y-6">
+                                    {data.roundMapping.map((r, i) => (
+                                        <div key={i} className="flex gap-4 relative z-10">
+                                            {/* Node */}
+                                            <div className="w-8 h-8 rounded-full bg-indigo-50 border-2 border-[color:var(--clr-accent)] text-[color:var(--clr-accent)] flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                                                {i + 1}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-[color:var(--clr-text-primary)]">{r.title}</h4>
+                                                <p className="text-sm font-medium text-[color:var(--clr-accent)] mb-1">{r.focus}</p>
+                                                <p className="text-xs text-gray-500">{r.why}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* B) Interview Rounds Checklist */}
                     <Card>
