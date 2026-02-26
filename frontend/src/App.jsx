@@ -6,6 +6,7 @@ import Practice from './pages/Practice';
 import Assessments from './pages/Assessments';
 import Resources from './pages/Resources';
 import Profile from './pages/Profile';
+import Results from './pages/Results';
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
       {
         path: 'profile',
         element: <Profile />,
+      },
+      {
+        path: 'results/:id',
+        element: <Results />,
       },
     ],
   },
