@@ -1,52 +1,32 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
-import DashboardShell from './pages/DashboardShell';
-import DashboardOverview from './pages/DashboardOverview';
-import Practice from './pages/Practice';
-import Assessments from './pages/Assessments';
-import Resources from './pages/Resources';
-import Profile from './pages/Profile';
-import Results from './pages/Results';
+import { ResumeProvider } from './context/ResumeContext';
+import ResumeHome from './pages/resume/ResumeHome';
+import ResumeBuilder from './pages/resume/ResumeBuilder';
+import ResumePreview from './pages/resume/ResumePreview';
+import ResumeProof from './pages/resume/ResumeProof';
+import ResumeShell from './pages/resume/ResumeShell';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPage />,
+    element: <ResumeHome />,
   },
   {
-    path: '/dashboard',
-    element: <DashboardShell />,
+    element: <ResumeShell />,
     children: [
-      {
-        index: true,
-        element: <DashboardOverview />,
-      },
-      {
-        path: 'practice',
-        element: <Practice />,
-      },
-      {
-        path: 'assessments',
-        element: <Assessments />,
-      },
-      {
-        path: 'resources',
-        element: <Resources />,
-      },
-      {
-        path: 'profile',
-        element: <Profile />,
-      },
-      {
-        path: 'results/:id',
-        element: <Results />,
-      },
-    ],
-  },
+      { path: '/builder', element: <ResumeBuilder /> },
+      { path: '/preview', element: <ResumePreview /> },
+      { path: '/proof', element: <ResumeProof /> }
+    ]
+  }
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ResumeProvider>
+      <RouterProvider router={router} />
+    </ResumeProvider>
+  );
 }
 
 export default App;
