@@ -3,6 +3,7 @@ import { useResume } from '../../context/ResumeContext';
 import { Plus, Trash2 } from 'lucide-react';
 import LivePreview from './LivePreview';
 import ATSScore from './ATSScore';
+import TemplateTabs from './TemplateTabs';
 
 export default function ResumeBuilder() {
     const { data, setData, loadSampleData } = useResume();
@@ -26,6 +27,37 @@ export default function ResumeBuilder() {
 
     const updateArrayItem = (field, id, key, value) => {
         setData(prev => ({ ...prev, [field]: prev[field].map(i => i.id === id ? { ...i, [key]: value } : i) }));
+    };
+
+    const getBulletGuidance = (text) => {
+        if (!text || text.trim().length === 0) return null;
+
+        const lines = text.split('\n').filter(l => l.trim().length > 0);
+        let missingVerb = false;
+        let missingNumber = false;
+
+        const verbsRegex = /^(Built|Developed|Designed|Implemented|Led|Improved|Created|Optimized|Automated)\b/i;
+        const numberRegex = /[0-9]|%|\bk\b|\bx\b/i;
+
+        lines.forEach(line => {
+            const clean = line.replace(/^[\*\-\s]+/, '').trim();
+            if (clean.length > 0) {
+                if (!verbsRegex.test(clean)) missingVerb = true;
+                if (!numberRegex.test(clean)) missingNumber = true;
+            }
+        });
+
+        const warnings = [];
+        if (missingVerb) warnings.push("Start with a strong action verb.");
+        if (missingNumber) warnings.push("Add measurable impact (numbers).");
+
+        if (warnings.length === 0) return null;
+
+        return (
+            <div className="mt-2 text-xs text-indigo-700 font-medium bg-indigo-50/70 border border-indigo-100 px-3 py-2 rounded">
+                <span className="font-bold">Tip:</span> {warnings.join(' ')}
+            </div>
+        );
     };
 
     return (
@@ -101,7 +133,10 @@ export default function ResumeBuilder() {
                                         <input className="form-input" placeholder="Role" value={exp.role} onChange={e => updateArrayItem('experience', exp.id, 'role', e.target.value)} />
                                     </div>
                                     <input className="form-input" placeholder="Duration (e.g., Jan 2020 - Present)" value={exp.duration} onChange={e => updateArrayItem('experience', exp.id, 'duration', e.target.value)} />
-                                    <textarea className="form-input h-20 resize-none" placeholder="Description/Responsibilities..." value={exp.description} onChange={e => updateArrayItem('experience', exp.id, 'description', e.target.value)}></textarea>
+                                    <div>
+                                        <textarea className="form-input h-20 resize-none !mb-0" placeholder="Description/Responsibilities..." value={exp.description} onChange={e => updateArrayItem('experience', exp.id, 'description', e.target.value)}></textarea>
+                                        {getBulletGuidance(exp.description)}
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -121,7 +156,10 @@ export default function ResumeBuilder() {
                                         <input className="form-input" placeholder="Project Name" value={proj.name} onChange={e => updateArrayItem('projects', proj.id, 'name', e.target.value)} />
                                         <input className="form-input" placeholder="Link" value={proj.link} onChange={e => updateArrayItem('projects', proj.id, 'link', e.target.value)} />
                                     </div>
-                                    <textarea className="form-input h-20 resize-none" placeholder="Project Description..." value={proj.description} onChange={e => updateArrayItem('projects', proj.id, 'description', e.target.value)}></textarea>
+                                    <div>
+                                        <textarea className="form-input h-20 resize-none !mb-0" placeholder="Project Description..." value={proj.description} onChange={e => updateArrayItem('projects', proj.id, 'description', e.target.value)}></textarea>
+                                        {getBulletGuidance(proj.description)}
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -138,7 +176,10 @@ export default function ResumeBuilder() {
 
             {/* Right: Live Preview */}
             <div className="w-1/2 bg-[var(--clr-surface-alt)] p-8 overflow-y-auto hidden md:block">
-                <div className="bg-white shadow-xl rounded w-full min-h-[842px] max-w-[700px] mx-auto p-12 relative scale-95 transform-gpu origin-top">
+                <div className="flex justify-between items-center mb-6 max-w-[700px] mx-auto scale-95 origin-top w-full">
+                    <TemplateTabs />
+                </div>
+                <div className="bg-white shadow-xl rounded w-full min-h-[842px] max-w-[700px] mx-auto p-12 relative scale-95 transform-gpu origin-top -mt-8">
                     {/* Reuse layout from preview component */}
                     <LivePreview data={data} />
                 </div>

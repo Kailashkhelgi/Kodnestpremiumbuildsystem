@@ -21,11 +21,10 @@ export default function ATSScore({ data }) {
         suggestions.push("Add at least 2 projects.");
     }
 
-    // Experience entry
     if (data.experience && data.experience.length >= 1) {
         score += 10;
     } else {
-        suggestions.push("Add at least 1 experience entry.");
+        suggestions.push("Add internship or project experience.");
     }
 
     // Skills length
@@ -105,7 +104,7 @@ export default function ATSScore({ data }) {
                 <div className="flex-1">
                     {displaySuggestions.length > 0 ? (
                         <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-gray-800">Top Suggestions:</h4>
+                            <h4 className="text-sm font-semibold text-gray-800">Top 3 Improvements:</h4>
                             <ul className="text-sm text-gray-600 space-y-1 list-disc pl-4">
                                 {displaySuggestions.map((s, i) => (
                                     <li key={i}>{s}</li>

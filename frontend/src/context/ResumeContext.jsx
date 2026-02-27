@@ -12,7 +12,8 @@ export const ResumeProvider = ({ children }) => {
         experience: [],
         projects: [],
         skills: '',
-        links: { github: '', linkedin: '' }
+        links: { github: '', linkedin: '' },
+        template: 'Classic'
     };
 
     const [data, setData] = useState(() => {
