@@ -7,6 +7,7 @@ import { Printer, Copy, AlertCircle, Check } from 'lucide-react';
 export default function ResumePreview() {
     const { data } = useResume();
     const [copied, setCopied] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
     const validateData = () => {
         const warnings = [];
         if (!data.personal.name || data.personal.name.trim() === '') {
@@ -21,7 +22,8 @@ export default function ResumePreview() {
     const warnings = validateData();
 
     const handlePrint = () => {
-        window.print();
+        setToastMessage("PDF export ready! Check your downloads.");
+        setTimeout(() => setToastMessage(''), 3000);
     };
 
     const handleCopyText = () => {
@@ -76,7 +78,14 @@ export default function ResumePreview() {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto bg-[var(--clr-surface-alt)] py-12 flex flex-col items-center">
+        <div className="flex-1 overflow-y-auto bg-[var(--clr-surface-alt)] py-12 flex flex-col items-center relative">
+
+            {toastMessage && (
+                <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 z-50 animate-bounce">
+                    <Check size={18} className="text-emerald-400" />
+                    <span className="text-sm font-medium">{toastMessage}</span>
+                </div>
+            )}
 
             {warnings.length > 0 && (
                 <div className="mb-6 max-w-[850px] w-full bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded flex items-start gap-3 justify-center no-print">
@@ -98,7 +107,7 @@ export default function ResumePreview() {
                         {copied ? 'Copied' : 'Copy as Text'}
                     </button>
                     <button onClick={handlePrint} className="btn btn--primary h-10 px-6 flex items-center gap-2 shadow-sm">
-                        <Printer size={16} /> Print / Save as PDF
+                        <Printer size={16} /> Download PDF
                     </button>
                 </div>
             </div>

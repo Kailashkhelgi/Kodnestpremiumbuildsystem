@@ -13,7 +13,8 @@ export const ResumeProvider = ({ children }) => {
         projects: [],
         skills: { technical: [], soft: [], tools: [] },
         links: { github: '', linkedin: '' },
-        template: 'Classic'
+        template: 'Classic',
+        themeColor: 'hsl(168, 60%, 40%)'
     };
 
     const [data, setData] = useState(() => {
@@ -60,7 +61,9 @@ export const ResumeProvider = ({ children }) => {
                 soft: ['Problem Solving', 'Team Leadership'],
                 tools: ['AWS', 'Git']
             },
-            links: { github: 'github.com/alex', linkedin: 'linkedin.com/in/alexp' }
+            links: { github: 'github.com/alex', linkedin: 'linkedin.com/in/alexp' },
+            template: 'Classic',
+            themeColor: 'hsl(168, 60%, 40%)'
         });
     };
 
