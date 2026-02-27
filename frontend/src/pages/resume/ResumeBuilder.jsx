@@ -2,6 +2,7 @@ import React from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { Plus, Trash2 } from 'lucide-react';
 import LivePreview from './LivePreview';
+import ATSScore from './ATSScore';
 
 export default function ResumeBuilder() {
     const { data, setData, loadSampleData } = useResume();
@@ -35,6 +36,8 @@ export default function ResumeBuilder() {
                     <h2 className="text-2xl font-serif font-semibold text-[color:var(--clr-text-primary)]">Resume Details</h2>
                     <button onClick={loadSampleData} className="btn btn--secondary h-8 px-3 text-xs">Load Sample Data</button>
                 </div>
+
+                <ATSScore data={data} />
 
                 <div className="space-y-8">
                     {/* Personal Info */}

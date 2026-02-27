@@ -15,7 +15,18 @@ export const ResumeProvider = ({ children }) => {
         links: { github: '', linkedin: '' }
     };
 
-    const [data, setData] = useState(defaultData);
+    const [data, setData] = useState(() => {
+        try {
+            const saved = localStorage.getItem('resumeBuilderData');
+            return saved ? JSON.parse(saved) : defaultData;
+        } catch {
+            return defaultData;
+        }
+    });
+
+    React.useEffect(() => {
+        localStorage.setItem('resumeBuilderData', JSON.stringify(data));
+    }, [data]);
 
     const loadSampleData = () => {
         setData({
