@@ -54,11 +54,21 @@ export default function ResumePreview() {
         if (data.projects && data.projects.length > 0) {
             text += `PROJECTS\n`;
             data.projects.forEach(proj => {
-                text += `${proj.name || ''} ${proj.link ? `| ${proj.link}` : ''}\n${proj.description || ''}\n\n`;
+                const urls = [proj.liveUrl, proj.githubUrl].filter(Boolean).join(' | ');
+                text += `${proj.name || ''} ${urls ? `| ${urls}` : ''}\n${proj.description || ''}\n`;
+                if (proj.techStack?.length) text += `Tech Stack: ${proj.techStack.join(', ')}\n`;
+                text += '\n';
             });
         }
 
-        if (data.skills) text += `SKILLS\n${data.skills}\n`;
+        if (typeof data.skills === 'string') {
+            if (data.skills) text += `SKILLS\n${data.skills}\n`;
+        } else if (data.skills) {
+            text += `SKILLS\n`;
+            if (data.skills.technical?.length) text += `Technical: ${data.skills.technical.join(', ')}\n`;
+            if (data.skills.soft?.length) text += `Soft Skills: ${data.skills.soft.join(', ')}\n`;
+            if (data.skills.tools?.length) text += `Tools: ${data.skills.tools.join(', ')}\n`;
+        }
 
         navigator.clipboard.writeText(text);
         setCopied(true);

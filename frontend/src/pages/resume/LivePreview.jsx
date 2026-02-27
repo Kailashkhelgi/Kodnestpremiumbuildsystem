@@ -1,4 +1,5 @@
 import React from 'react';
+import { ExternalLink, Github } from 'lucide-react';
 
 export default function LivePreview({ data }) {
     if (!data) return null;
@@ -88,18 +89,58 @@ export default function LivePreview({ data }) {
                         <div key={proj.id} className="mb-3 block">
                             <div className="flex justify-between font-bold text-sm">
                                 <span>{proj.name || 'Project Name'}</span>
-                                <span className="text-xs font-normal underline">{proj.link}</span>
+                                <div className="text-xs font-normal flex gap-2">
+                                    {proj.liveUrl && <a href={proj.liveUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-gray-600 hover:text-black transition-colors"><ExternalLink size={12} /> Live</a>}
+                                    {proj.githubUrl && <a href={proj.githubUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-gray-600 hover:text-black transition-colors"><Github size={12} /> GitHub</a>}
+                                </div>
                             </div>
                             <p className="text-sm mt-1 whitespace-pre-wrap">{proj.description}</p>
+                            {proj.techStack && proj.techStack.length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    {proj.techStack.map((tech, i) => (
+                                        <span key={i} className="inline-block border border-gray-300 rounded px-1.5 py-0.5 text-[10px] text-gray-600 uppercase tracking-wider">{tech}</span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
             )}
 
-            {data.skills && (
+            {(data.skills?.technical?.length > 0 || data.skills?.soft?.length > 0 || data.skills?.tools?.length > 0 || typeof data.skills === 'string') && (
                 <div className="mb-5">
                     <h2 className={sectionHeaderClass}>Skills</h2>
-                    <p className="text-sm">{data.skills}</p>
+
+                    {typeof data.skills === 'string' ? (
+                        <p className="text-sm">{data.skills}</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {data.skills?.technical?.length > 0 && (
+                                <div className="text-sm flex flex-wrap items-center gap-1.5">
+                                    <span className="font-bold mr-1">Technical:</span>
+                                    {data.skills.technical.map((s, i) => (
+                                        <span key={i} className="inline-block bg-gray-100 border border-gray-200 text-gray-800 rounded px-1.5 py-0.5 text-xs">{s}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {data.skills?.soft?.length > 0 && (
+                                <div className="text-sm flex flex-wrap items-center gap-1.5">
+                                    <span className="font-bold mr-1">Soft Skills:</span>
+                                    {data.skills.soft.map((s, i) => (
+                                        <span key={i} className="inline-block bg-gray-100 border border-gray-200 text-gray-800 rounded px-1.5 py-0.5 text-xs">{s}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {data.skills?.tools?.length > 0 && (
+                                <div className="text-sm flex flex-wrap items-center gap-1.5">
+                                    <span className="font-bold mr-1">Tools:</span>
+                                    {data.skills.tools.map((s, i) => (
+                                        <span key={i} className="inline-block bg-gray-100 border border-gray-200 text-gray-800 rounded px-1.5 py-0.5 text-xs">{s}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

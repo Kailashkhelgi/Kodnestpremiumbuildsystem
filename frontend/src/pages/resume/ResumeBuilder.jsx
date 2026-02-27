@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import LivePreview from './LivePreview';
 import ATSScore from './ATSScore';
 import TemplateTabs from './TemplateTabs';
+import TagInput from './TagInput';
 
 export default function ResumeBuilder() {
     const { data, setData, loadSampleData } = useResume();
+    const [openProjectId, setOpenProjectId] = useState(null);
+    const [suggestingSkills, setSuggestingSkills] = useState(false);
 
     const updatePersonal = (field, value) => {
         setData(prev => ({ ...prev, personal: { ...prev.personal, [field]: value } }));
@@ -58,6 +61,31 @@ export default function ResumeBuilder() {
                 <span className="font-bold">Tip:</span> {warnings.join(' ')}
             </div>
         );
+    };
+
+    const handleSuggestSkills = () => {
+        setSuggestingSkills(true);
+        setTimeout(() => {
+            setData(prev => ({
+                ...prev,
+                skills: {
+                    technical: [...new Set([...prev.skills.technical, "TypeScript", "React", "Node.js", "PostgreSQL", "GraphQL"])],
+                    soft: [...new Set([...prev.skills.soft, "Team Leadership", "Problem Solving"])],
+                    tools: [...new Set([...prev.skills.tools, "Git", "Docker", "AWS"])]
+                }
+            }));
+            setSuggestingSkills(false);
+        }, 1000);
+    };
+
+    const addProject = () => {
+        const id = Date.now();
+        addArrayItem('projects', { id, name: '', description: '', techStack: [], liveUrl: '', githubUrl: '' });
+        setOpenProjectId(id);
+    };
+
+    const updateSkillCategory = (category, tags) => {
+        setData(prev => ({ ...prev, skills: { ...prev.skills, [category]: tags } }));
     };
 
     return (
@@ -146,30 +174,107 @@ export default function ResumeBuilder() {
                     <section>
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Projects</h3>
-                            <button onClick={() => addArrayItem('projects', { id: Date.now(), name: '', link: '', description: '' })} className="text-[color:var(--clr-accent)] hover:text-indigo-800 text-sm font-medium flex items-center gap-1"><Plus size={14} /> Add</button>
+                            <button onClick={addProject} className="text-[color:var(--clr-accent)] hover:text-indigo-800 text-sm font-medium flex items-center gap-1"><Plus size={14} /> Add Project</button>
                         </div>
-                        {data.projects.map(proj => (
-                            <div key={proj.id} className="p-4 border border-[var(--clr-border)] rounded-lg mb-3 bg-white relative group shadow-sm transition-all hover:border-[color:var(--clr-accent)]">
-                                <button onClick={() => removeArrayItem('projects', proj.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input className="form-input" placeholder="Project Name" value={proj.name} onChange={e => updateArrayItem('projects', proj.id, 'name', e.target.value)} />
-                                        <input className="form-input" placeholder="Link" value={proj.link} onChange={e => updateArrayItem('projects', proj.id, 'link', e.target.value)} />
+                        {data.projects.map(proj => {
+                            const isOpen = openProjectId === proj.id;
+                            return (
+                                <div key={proj.id} className="border border-[var(--clr-border)] rounded-lg mb-3 bg-white shadow-sm transition-all overflow-hidden group">
+                                    <div
+                                        className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+                                        onClick={() => setOpenProjectId(isOpen ? null : proj.id)}
+                                    >
+                                        <div className="font-medium text-[var(--clr-text-primary)]">
+                                            {proj.name || 'Untitled Project'}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); removeArrayItem('projects', proj.id); }}
+                                                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                            {isOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <textarea className="form-input h-20 resize-none !mb-0" placeholder="Project Description..." value={proj.description} onChange={e => updateArrayItem('projects', proj.id, 'description', e.target.value)}></textarea>
-                                        {getBulletGuidance(proj.description)}
-                                    </div>
+
+                                    {isOpen && (
+                                        <div className="p-4 pt-0 space-y-4 border-t border-[var(--clr-border)] mt-2 bg-gray-50/50">
+                                            <input className="form-input mt-4" placeholder="Project Title" value={proj.name} onChange={e => updateArrayItem('projects', proj.id, 'name', e.target.value)} />
+                                            <div>
+                                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                    <span>Description</span>
+                                                    <span>{(proj.description || '').length}/200</span>
+                                                </div>
+                                                <textarea
+                                                    className="form-input h-24 resize-none !mb-0"
+                                                    placeholder="Keep it concise..."
+                                                    value={proj.description}
+                                                    maxLength={200}
+                                                    onChange={e => updateArrayItem('projects', proj.id, 'description', e.target.value)}
+                                                ></textarea>
+                                                {getBulletGuidance(proj.description)}
+                                            </div>
+                                            <div>
+                                                <div className="text-xs text-gray-500 mb-1">Tech Stack</div>
+                                                <TagInput tags={proj.techStack || []} onChange={(tags) => updateArrayItem('projects', proj.id, 'techStack', tags)} placeholder="Add tech..." />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">Live URL (Optional)</div>
+                                                    <input className="form-input" placeholder="https://..." value={proj.liveUrl} onChange={e => updateArrayItem('projects', proj.id, 'liveUrl', e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">GitHub URL (Optional)</div>
+                                                    <input className="form-input" placeholder="github.com/..." value={proj.githubUrl} onChange={e => updateArrayItem('projects', proj.id, 'githubUrl', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </section>
 
                     {/* Skills */}
                     <section>
-                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Skills</h3>
-                        <input className="form-input" placeholder="React, Node.js, Python..." value={data.skills} onChange={e => setData(prev => ({ ...prev, skills: e.target.value }))} />
-                        <p className="text-xs text-gray-500 mt-2">Comma separated values</p>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Skills</h3>
+                            <button
+                                onClick={handleSuggestSkills}
+                                disabled={suggestingSkills}
+                                className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                            >
+                                {suggestingSkills ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                Suggest Skills
+                            </button>
+                        </div>
+
+                        <div className="space-y-5">
+                            <div>
+                                <div className="flex justify-between text-xs font-medium text-gray-600 mb-1.5">
+                                    <span>Technical Skills</span>
+                                    <span>({data.skills?.technical?.length || 0})</span>
+                                </div>
+                                <TagInput tags={data.skills?.technical || []} onChange={(tags) => updateSkillCategory('technical', tags)} placeholder="Add technical skill..." />
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-xs font-medium text-gray-600 mb-1.5">
+                                    <span>Soft Skills</span>
+                                    <span>({data.skills?.soft?.length || 0})</span>
+                                </div>
+                                <TagInput tags={data.skills?.soft || []} onChange={(tags) => updateSkillCategory('soft', tags)} placeholder="Add soft skill..." />
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-xs font-medium text-gray-600 mb-1.5">
+                                    <span>Tools & Technologies</span>
+                                    <span>({data.skills?.tools?.length || 0})</span>
+                                </div>
+                                <TagInput tags={data.skills?.tools || []} onChange={(tags) => updateSkillCategory('tools', tags)} placeholder="Add tools..." />
+                            </div>
+                        </div>
                     </section>
                 </div>
             </div>

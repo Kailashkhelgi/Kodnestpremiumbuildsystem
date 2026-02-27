@@ -28,7 +28,18 @@ export default function ATSScore({ data }) {
     }
 
     // Skills length
-    const skillsArray = data.skills ? data.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    let skillsArray = [];
+    if (data.skills) {
+        if (typeof data.skills === 'string') {
+            skillsArray = data.skills.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+            skillsArray = [
+                ...(data.skills.technical || []),
+                ...(data.skills.soft || []),
+                ...(data.skills.tools || [])
+            ];
+        }
+    }
     if (skillsArray.length >= 8) {
         score += 10;
     } else {
