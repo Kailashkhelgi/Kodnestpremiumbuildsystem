@@ -6,28 +6,56 @@ export default function ATSScore({ data }) {
     let score = 0;
     const suggestions = [];
 
-    // Length of summary (approx. word count)
-    const summaryWords = data.summary ? data.summary.trim().split(/\s+/).length : 0;
-    if (summaryWords >= 40 && summaryWords <= 120) {
-        score += 15;
-    } else {
-        suggestions.push("Write a stronger summary (40–120 words).");
-    }
-
-    // Projects count
-    if (data.projects && data.projects.length >= 2) {
+    if (data.personal?.name && data.personal.name.trim().length > 0) {
         score += 10;
     } else {
-        suggestions.push("Add at least 2 projects.");
+        suggestions.push("Add your full name (+10 points)");
     }
 
-    if (data.experience && data.experience.length >= 1) {
+    if (data.personal?.email && data.personal.email.trim().length > 0) {
         score += 10;
     } else {
-        suggestions.push("Add internship or project experience.");
+        suggestions.push("Add an email address (+10 points)");
     }
 
-    // Skills length
+    if (data.personal?.phone && data.personal.phone.trim().length > 0) {
+        score += 5;
+    } else {
+        suggestions.push("Add a phone number (+5 points)");
+    }
+
+    const summaryText = data.summary ? data.summary.trim() : "";
+    if (summaryText.length > 50) {
+        score += 10;
+    } else {
+        suggestions.push("Add a professional summary > 50 chars (+10 points)");
+    }
+
+    const verbsRegex = /\b(built|led|designed|improved|developed|created|optimized|managed|implemented|engineered)\b/i;
+    if (summaryText.length > 0 && verbsRegex.test(summaryText)) {
+        score += 10;
+    } else if (summaryText.length > 0) {
+        suggestions.push("Use action verbs in summary (+10 points)");
+    }
+
+    let hasExpBullets = false;
+    if (data.experience && data.experience.length > 0) {
+        hasExpBullets = data.experience.some(e => e.description && e.description.trim().length > 0);
+        if (hasExpBullets) {
+            score += 15;
+        } else {
+            suggestions.push("Add bullet points to your experience (+15 points)");
+        }
+    } else {
+        suggestions.push("Add at least 1 experience entry with bullets (+15 points)");
+    }
+
+    if (data.education && data.education.length >= 1) {
+        score += 10;
+    } else {
+        suggestions.push("Add at least 1 education entry (+10 points)");
+    }
+
     let skillsArray = [];
     if (data.skills) {
         if (typeof data.skills === 'string') {
@@ -40,92 +68,96 @@ export default function ATSScore({ data }) {
             ];
         }
     }
-    if (skillsArray.length >= 8) {
+    if (skillsArray.length >= 5) {
         score += 10;
     } else {
-        suggestions.push("Add more skills (target 8+).");
+        suggestions.push("Add at least 5 skills (+10 points)");
     }
 
-    // Links exist
-    if ((data.links?.github && data.links.github.trim()) || (data.links?.linkedin && data.links.linkedin.trim())) {
+    if (data.projects && data.projects.length >= 1) {
         score += 10;
     } else {
-        suggestions.push("Include a GitHub or LinkedIn link.");
+        suggestions.push("Add at least 1 project (+10 points)");
     }
 
-    // Numbers in bullets
-    const bulletText = [
-        ...(data.experience || []).map(e => e.description),
-        ...(data.projects || []).map(p => p.description)
-    ].join(' ');
-
-    // Simple regex to find numbers (digits, %, k, x multipliers)
-    // Looking for digits or explicit common metric indicators
-    if (/[0-9]/.test(bulletText) || /%|\bk\b|\bx\b/i.test(bulletText)) {
-        score += 15;
+    if (data.links?.linkedin && data.links.linkedin.trim().length > 0) {
+        score += 5;
     } else {
-        suggestions.push("Add measurable impact (numbers/metrics) in points.");
+        suggestions.push("Add a LinkedIn profile link (+5 points)");
     }
 
-    // Complete education fields
-    let hasCompleteEdu = false;
-    if (data.education && data.education.length > 0) {
-        hasCompleteEdu = data.education.some(edu =>
-            edu.school?.trim() && edu.degree?.trim() && edu.year?.trim()
-        );
-        if (hasCompleteEdu) score += 10;
-    }
-    if (!hasCompleteEdu) {
-        suggestions.push("Ensure your education entries have complete details.");
+    if (data.links?.github && data.links.github.trim().length > 0) {
+        score += 5;
+    } else {
+        suggestions.push("Add a GitHub profile link (+5 points)");
     }
 
     if (score > 100) score = 100;
 
-    // We only take the top 3 suggestions
+    let scoreColor = "text-red-500";
+    let strokeColor = "#ef4444"; // red-500
+    let scoreLabel = "Needs Work";
+
+    if (score > 40 && score <= 70) {
+        scoreColor = "text-amber-500";
+        strokeColor = "#f59e0b"; // amber-500
+        scoreLabel = "Getting There";
+    } else if (score > 70) {
+        scoreColor = "text-emerald-500";
+        strokeColor = "#10b981"; // emerald-500
+        scoreLabel = "Strong Resume";
+    }
+
     const displaySuggestions = suggestions.slice(0, 3);
 
     return (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mt-6 mb-6">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">ATS Readiness Score</h3>
+        <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-6 mt-6 mb-6">
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6">Live Form Parser</h3>
 
-            <div className="flex items-center gap-6 mb-4">
-                <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <path
-                            className="text-white"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            fill="none"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                            className="text-[color:var(--clr-accent)] transition-all duration-500 ease-out"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            strokeDasharray={`${score}, 100`}
-                            fill="none"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-serif font-bold text-[color:var(--clr-text-primary)]">{score}</span>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-2">
+                <div className="flex flex-col items-center gap-2">
+                    <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                            <path
+                                className="text-gray-100"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <path
+                                className="transition-all duration-700 ease-out"
+                                stroke={strokeColor}
+                                strokeWidth="3"
+                                strokeDasharray={`${score}, 100`}
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className={`text-3xl font-bold ${scoreColor}`}>{score}</span>
+                        </div>
                     </div>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${scoreColor}`}>{scoreLabel}</span>
                 </div>
 
-                <div className="flex-1">
+                <div className="flex-1 w-full pt-2">
                     {displaySuggestions.length > 0 ? (
-                        <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-gray-800">Top 3 Improvements:</h4>
-                            <ul className="text-sm text-gray-600 space-y-1 list-disc pl-4">
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider">How to Improve (<span className="text-gray-500">{score}/100</span>):</h4>
+                            <ul className="text-[13px] text-gray-600 space-y-2">
                                 {displaySuggestions.map((s, i) => (
-                                    <li key={i}>{s}</li>
+                                    <li key={i} className="flex gap-2 items-start">
+                                        <span className="text-amber-400 mt-0.5">•</span>
+                                        <span>{s}</span>
+                                    </li>
                                 ))}
                             </ul>
                         </div>
                     ) : (
-                        <div>
-                            <h4 className="text-sm font-semibold text-emerald-700">Excellent!</h4>
-                            <p className="text-sm text-gray-600 mt-1">Your resume matches core ATS heuristic parameters perfectly.</p>
+                        <div className="h-full flex flex-col justify-center pb-4">
+                            <h4 className="text-sm font-bold text-emerald-600 mb-1">Maximum Score Reached!</h4>
+                            <p className="text-[13px] text-gray-500 leading-relaxed">Your resume perfectly matches all heuristic data parsing conditions. Excellent work.</p>
                         </div>
                     )}
                 </div>
