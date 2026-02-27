@@ -418,3 +418,42 @@ p {
     width: 100%;
   }
 }
+
+/* 5. PRINT RULES */
+@media print {
+  @page {
+    margin: 0;
+    size: letter portrait;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-container,
+  .print-container * {
+    visibility: visible;
+  }
+
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 40px !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Prevent awkward page breaks inside items */
+  .mb-3.block,
+  .mb-2,
+  .mb-5 {
+    page-break-inside: avoid;
+  }
+}
